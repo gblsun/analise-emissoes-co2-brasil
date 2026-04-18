@@ -1,96 +1,115 @@
-# ============================================================
-# Célula 0 — Instalação de dependências
-# ============================================================
+# Célula 0 — Instalar bibliotecas necessárias
 !pip install scikit-learn
+Requirement already satisfied: scikit-learn in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (1.6.1)
+Requirement already satisfied: numpy>=1.19.5 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (2.0.1)
+Requirement already satisfied: scipy>=1.6.0 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (1.15.2)
+Requirement already satisfied: joblib>=1.2.0 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (1.4.2)
+Requirement already satisfied: threadpoolctl>=3.1.0 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (3.6.0)
+WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
+WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
+WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
+WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
+# Celula 1 — Importar bibliotecas
 
-python
-Executar código
-Copiar código
-# ============================================================
-# Célula 1 — Todos os imports
-# ============================================================
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error,mean_squared_error, r2_score
 
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor #tentar aplicar!
 
-print("✅ Todos os imports carregados!")
 
-python
-Executar código
-Copiar código
-# ============================================================
-# Célula 2 — Carregar dados
-# ============================================================
+print("Bibliotecas importadas com sucesso!")
+Bibliotecas importadas com sucesso!
+# Célula 2 — Carregamento do dataset
+
 df_raw = pd.read_csv("br_seeg_emissoes_brasil.csv")
-print(f"Dataset original: {df_raw.shape}")
+print(f"Shape original: {df_raw.shape}")
 df_raw.head()
+Shape original: (454850, 12)
 
-python
-Executar código
-Copiar código
-# ============================================================
-# Célula 3 — Pipeline completo de preparação dos dados
-# ============================================================
-# Tudo junto numa célula só para evitar problemas de re-execução.
-# Sempre partimos do df_raw (original) para garantir consistência.
+ano	nivel_1	nivel_2	nivel_3	nivel_4	nivel_5	nivel_6	tipo_emissao	gas	atividade_economica	produto	emissao
+0	1970	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	230462.17
+1	1971	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	226016.30
+2	1972	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	220101.20
+3	1973	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	214195.56
+4	1974	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	186862.84
+# Célula 3 — Seleção das colunas relevantes
+'''
+    Tudo junto numa célula só para evitar problemas de re-execução.
+    Sempre partimos do df_raw (original) para garantir consistência.
+'''
 
-# --- Passo 1: Selecionar colunas relevantes ---
-df = df_raw[["ano", "nivel_1", "gas", "emissao"]].copy()
-print(f"1) Seleção de colunas: {df.shape}")
-print(f"   Colunas: {list(df.columns)}")
+# Passo 1: Selecionar colunas relevantes
+df =df_raw[["ano", "nivel_1" , "gas" , "emissao"]].copy()
+print(f"1- Seleção de colunas: {df.shape}")
 
-# --- Passo 2: Filtrar apenas emissões de CO2 ---
-df = df[df["gas"] == "CO2 (t)"].copy()
-print(f"\n2) Filtro CO2: {df.shape}")
+# Passo 2: Filtrar para apenas emissão de CO2
+df = df[df["gas"] == "CO2"].copy()
+print(f"\n2- Filtrar para CO2: {df.shape}")
 
-# --- Passo 3: Verificar valores nulos ---
-print(f"\n3) Valores nulos ANTES da limpeza:")
+# Passo 3: verificar valores nulos
+print(f"\n3- Valores nulos antes da limpeza:")
 print(df.isnull().sum())
 
-# --- Passo 4: Remover linhas onde 'emissao' é nulo ---
-#     Modelos de ML não aceitam NaN no target (y)
+# Passo 4: Remover linhas onde "emissão" é nulo
+# Modelos de ML não aceitam NaN no target (y).
 df = df.dropna(subset=["emissao"])
-print(f"\n4) Após remover NaN em 'emissao': {df.shape}")
 
-# --- Passo 5: Remover coluna 'gas' ---
-#     Já filtramos só CO2, então essa coluna tem valor único
-#     e causaria erro "could not convert string to float"
+# Passo 5: Remover coluna "gas"
+#   Já filtramos só CO2 (t), então essa coluna tem valor único
+#   e causaria erro "Could not convert string to float"
 df = df.drop(columns=["gas"])
-print(f"\n5) Após remover coluna 'gas': {df.shape}")
-print(f"   Colunas: {list(df.columns)}")
+print(f"\n5 - Após remover coluna 'gas': {df.shape}")
 
-# --- Passo 6: One-Hot Encoding na coluna 'nivel_1' ---
-#     Converte categorias em colunas binárias (0 e 1)
-#     drop_first=True evita multicolinearidade
+# Passo 6: One-Hot Encoding na coluna 'nivel_1'
+#   Converte categorias em colunas binárias (0/1)
+#   drop_first=True evita multicolinearidade
 df = pd.get_dummies(df, columns=["nivel_1"], drop_first=True, dtype=int)
-print(f"\n6) Após One-Hot Encoding: {df.shape}")
-print(f"   Colunas: {list(df.columns)}")
+print(f"\n6 - Após One-Hot Encoding: {df.shape}")
+print(f"   Colunas {list(df.columns)}")
 
-# --- Verificação final ---
+# verificação final
 print(f"\n{'='*50}")
-print(f"✅ Dados prontos!")
+print(f"   Dados prontos!")
 print(f"   Total de amostras: {df.shape[0]}")
-print(f"   Total de colunas:  {df.shape[1]}")
-print(f"   'emissao' presente: {'emissao' in df.columns}")
-print(f"   Nulos restantes: {df.isnull().sum().sum()}")
-print(f"{'='*50}")
-df.head()
+print(f"   Total de colunas: {df.shape[1]}")
+print(f"   'emissao' presente: {df.isnull().sum().sum()}")
+print(f"\n{'='*50}")
+df
+1- Seleção de colunas: (454850, 4)
 
-python
-Executar código
-Copiar código
-# ============================================================
+2- Filtrar para CO2: (0, 4)
+
+3- Valores nulos antes da limpeza:
+ano        0
+nivel_1    0
+gas        0
+emissao    0
+dtype: int64
+
+5 - Após remover coluna 'gas': (0, 3)
+
+6 - Após One-Hot Encoding: (0, 2)
+   Colunas ['ano', 'emissao']
+
+==================================================
+   Dados prontos!
+   Total de amostras: 0
+   Total de colunas: 2
+   'emissao' presente: 0
+
+==================================================
+
+ano	emissao
 # Célula 4 — Separar X (features) e y (target)
-# ============================================================
 
 # X = tudo que o modelo usa para prever
 # y = o que queremos prever (emissão de CO2)
@@ -108,22 +127,34 @@ print(y.head())
 assert X.shape[0] == y.shape[0], "❌ X e y com tamanhos diferentes!"
 assert y.shape[0] > 0, "❌ y está vazio!"
 assert X.shape[1] > 0, "❌ X não tem features!"
-print(f"\n✅ {X.shape[0]} amostras, {X.shape[1]} features")
+print(f"\n {X.shape[0]} amostras, {X.shape[1]} features")
+X shape: (0, 1)
+y shape: (0,)
 
-python
-Executar código
-Copiar código
-# ============================================================
+Features (X): ['ano']
+
+y (primeiros 5 valores):
+Series([], Name: emissao, dtype: float64)
+---------------------------------------------------------------------------
+AssertionError                            Traceback (most recent call last)
+Cell In[5], line 17
+     15 # Verificações de segurança
+     16 assert X.shape[0] == y.shape[0], "❌ X e y com tamanhos diferentes!"
+---> 17 assert y.shape[0] > 0, "❌ y está vazio!"
+     18 assert X.shape[1] > 0, "❌ X não tem features!"
+     19 print(f"\n {X.shape[0]} amostras, {X.shape[1]} features")
+
+AssertionError: ❌ y está vazio!
 # Célula 5 — Normalização Min-Max
-# ============================================================
-# Transforma todos os valores para o intervalo [0, 1]
-# Fórmula: x_norm = (x - min) / (max - min)
-#
-# Por que normalizar?
-# - SVR é muito sensível à escala dos dados
-# - Facilita comparação entre features
-# - Melhora convergência de alguns algoritmos
+'''
+    Transforma todos os valores para o intervalo [0, 1]
+    Fórmula: x_norm = (x - min) / (max - min)
 
+    Por que normalizar?
+        - SVR é muito sensível à escala dos dados
+        - Facilita comparação entre features
+        - Melhora convergência de alguns algoritmos
+'''
 # Normalizar X (features)
 scaler_X = MinMaxScaler()
 X = pd.DataFrame(
@@ -146,15 +177,11 @@ print(f"\nX range: [{X.min().min():.4f}, {X.max().max():.4f}]")
 print(f"y range: [{y.min():.4f}, {y.max():.4f}]")
 print(f"\n✅ Normalização concluída!")
 X.head()
-
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 6 — Divisão treino/teste
-# ============================================================
-# 80% para treino, 20% para teste
-# random_state=42 garante reprodutibilidade
+'''
+    80% para treino, 20% para teste
+    random_state=42 garante reprodutibilidade
+'''
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
@@ -169,20 +196,16 @@ assert X_train.shape[0] == y_train.shape[0], "❌ Treino dessincronizado!"
 assert X_test.shape[0] == y_test.shape[0], "❌ Teste dessincronizado!"
 print(f"\n✅ Divisão correta! Pronto para treinar os modelos!")
 
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 7 — Função auxiliar de avaliação
-# ============================================================
-# Função reutilizável que treina, prediz e calcula métricas
-#
-# Métricas:
-# - MAE  = Erro Médio Absoluto (menor = melhor)
-# - RMSE = Raiz do Erro Quadrático Médio (menor = melhor)
-# - R²   = Coeficiente de Determinação (maior = melhor)
-#           1.0 = perfeito, 0.0 = não explica nada
-
+'''
+    Função reutilizável que treina, prediz e calcula métricas
+    Métricas:
+        - MAE  = Erro Médio Absoluto (menor = melhor)
+        - RMSE = Raiz do Erro Quadrático Médio (menor = melhor)
+        - R²   = Coeficiente de Determinação (maior = melhor)
+            1.0 = perfeito, 
+            0.0 = não explica nada.
+'''
 def avaliar_modelo(nome, modelo, X_train, X_test, y_train, y_test):
     """Treina o modelo, faz predições e exibe métricas."""
     
@@ -214,79 +237,57 @@ def avaliar_modelo(nome, modelo, X_train, X_test, y_train, y_test):
         "y_pred": y_pred
     }
 
-print("✅ Função avaliar_modelo() definida!")
+print(f"Função avaliar_modelo() definida!")
 
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 8 — Modelo 1: Regressão Linear Múltipla (MLR)
-# ============================================================
-# Encontra a melhor combinação linear das features
-# y = b0 + b1*x1 + b2*x2 + ... + bn*xn
-
+'''
+    Encontra a melhor combinação linear das features
+    y = b0 + b1*x1 + b2*x2 + ... + bn*xn
+'''
 res_mlr = avaliar_modelo(
     "Regressão Linear Múltipla",
     LinearRegression(),
     X_train, X_test, y_train, y_test
 )
-
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 9 — Modelo 2: Árvore de Regressão
-# ============================================================
-# Divide os dados em regiões usando regras de decisão
-# Simples e interpretável, mas pode overfittar
-
+'''
+Divide os dados em regiões usando regras de decisão
+Simples e interpretável, mas pode overfittar
+'''
 res_arvore = avaliar_modelo(
     "Árvore de Regressão",
     DecisionTreeRegressor(random_state=42),
     X_train, X_test, y_train, y_test
 )
-
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 10 — Modelo 3: Floresta Aleatória de Regressão
-# ============================================================
-# Combina várias árvores de decisão (ensemble)
-# Cada árvore vê uma parte aleatória dos dados
-# O resultado final é a média das predições
-
+'''
+    Combina várias árvores de decisão (ensemble)
+    Cada árvore vê uma parte aleatória dos dados
+    O resultado final é a média das predições
+'''
 res_floresta = avaliar_modelo(
     "Floresta Aleatória",
     RandomForestRegressor(n_estimators=100, random_state=42),
     X_train, X_test, y_train, y_test
 )
 
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 11 — Modelo 4: SVR (Support Vector Regression)
-# ============================================================
-# Encontra um hiperplano que melhor se ajusta aos dados
-# dentro de uma margem de tolerância (epsilon)
-# Muito sensível à escala — por isso normalizamos antes
+'''
+    Encontra um hiperplano que melhor se ajusta aos dados
+    dentro de uma margem de tolerância (epsilon)
+    Muito sensível à escala — por isso normalizamos antes
+'''
 
 res_svr = avaliar_modelo(
     "SVR (Support Vector Regression)",
     SVR(kernel="rbf", C=1.0, epsilon=0.01),
     X_train, X_test, y_train, y_test
 )
-
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 12 — Modelo 5: Gradient Boosting Regression
-# ============================================================
-# Constrói árvores sequencialmente, onde cada nova árvore
-# corrige os erros da anterior. Geralmente muito preciso.
-
+'''
+    Constrói árvores sequencialmente, onde cada nova árvore
+    corrige os erros da anterior. Geralmente muito preciso.
+'''
 res_gbr = avaliar_modelo(
     "Gradient Boosting",
     GradientBoostingRegressor(
@@ -297,13 +298,7 @@ res_gbr = avaliar_modelo(
     ),
     X_train, X_test, y_train, y_test
 )
-
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 13 — Ranking comparativo dos modelos
-# ============================================================
 
 resultados = pd.DataFrame([
     {k: v for k, v in r.items() if k != "y_pred"}
@@ -319,12 +314,7 @@ print("=" * 60)
 print(resultados.to_string(index=False))
 print("=" * 60)
 
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 14 — Gráfico: Real vs Predito (melhor modelo)
-# ============================================================
 
 # Identificar o melhor modelo
 melhor_nome = resultados.iloc[0]["nome"]
@@ -353,13 +343,7 @@ plt.show()
 
 print(f"\n🏆 Melhor modelo: {melhor_nome}")
 print(f"   R² = {resultados.iloc[0]['R2']:.6f}")
-
-python
-Executar código
-Copiar código
-# ============================================================
 # Célula 15 — Gráfico de barras comparativo
-# ============================================================
 
 fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 cores = ["#2ecc71", "#e74c3c", "#3498db", "#f39c12", "#9b59b6"]
