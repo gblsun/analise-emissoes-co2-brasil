@@ -41,6 +41,7 @@ ano	nivel_1	nivel_2	nivel_3	nivel_4	nivel_5	nivel_6	tipo_emissao	gas	atividade_e
 2	1972	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	220101.20
 3	1973	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	214195.56
 4	1974	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	186862.84
+
 # Célula 3 — Seleção das colunas relevantes
 '''
     Tudo junto numa célula só para evitar problemas de re-execução.
@@ -52,7 +53,7 @@ df =df_raw[["ano", "nivel_1" , "gas" , "emissao"]].copy()
 print(f"1- Seleção de colunas: {df.shape}")
 
 # Passo 2: Filtrar para apenas emissão de CO2
-df = df[df["gas"] == "CO2"].copy()
+df = df[df["gas"] == "CO2 (t)"].copy()
 print(f"\n2- Filtrar para CO2: {df.shape}")
 
 # Passo 3: verificar valores nulos
@@ -86,29 +87,41 @@ print(f"\n{'='*50}")
 df
 1- Seleção de colunas: (454850, 4)
 
-2- Filtrar para CO2: (0, 4)
+2- Filtrar para CO2: (37550, 4)
 
 3- Valores nulos antes da limpeza:
-ano        0
-nivel_1    0
-gas        0
-emissao    0
+ano           0
+nivel_1       0
+gas           0
+emissao    6755
 dtype: int64
 
-5 - Após remover coluna 'gas': (0, 3)
+5 - Após remover coluna 'gas': (30795, 3)
 
-6 - Após One-Hot Encoding: (0, 2)
-   Colunas ['ano', 'emissao']
+6 - Após One-Hot Encoding: (30795, 6)
+   Colunas ['ano', 'emissao', 'nivel_1_Energia', 'nivel_1_Mudança de Uso da Terra e Floresta', 'nivel_1_Processos Industriais', 'nivel_1_Resíduos ']
 
 ==================================================
    Dados prontos!
-   Total de amostras: 0
-   Total de colunas: 2
+   Total de amostras: 30795
+   Total de colunas: 6
    'emissao' presente: 0
 
 ==================================================
 
-ano	emissao
+ano	emissao	nivel_1_Energia	nivel_1_Mudança de Uso da Terra e Floresta	nivel_1_Processos Industriais	nivel_1_Resíduos
+14150	1970	223538.510	0	0	0	0
+14151	1971	225473.060	0	0	0	0
+14152	1972	333445.330	0	0	0	0
+14153	1973	280380.690	0	0	0	0
+14154	1974	315281.040	0	0	0	0
+...	...	...	...	...	...	...
+454095	2015	40491.847	0	0	0	1
+454096	2016	41258.340	0	0	0	1
+454097	2017	41549.659	0	0	0	1
+454098	2018	41076.432	0	0	0	1
+454099	2019	41451.142	0	0	0	1
+30795 rows × 6 columns
 # Célula 4 — Separar X (features) e y (target)
 
 # X = tudo que o modelo usa para prever
@@ -128,24 +141,21 @@ assert X.shape[0] == y.shape[0], "❌ X e y com tamanhos diferentes!"
 assert y.shape[0] > 0, "❌ y está vazio!"
 assert X.shape[1] > 0, "❌ X não tem features!"
 print(f"\n {X.shape[0]} amostras, {X.shape[1]} features")
-X shape: (0, 1)
-y shape: (0,)
+X shape: (30795, 5)
+y shape: (30795,)
 
-Features (X): ['ano']
+Features (X): ['ano', 'nivel_1_Energia', 'nivel_1_Mudança de Uso da Terra e Floresta', 'nivel_1_Processos Industriais', 'nivel_1_Resíduos ']
 
 y (primeiros 5 valores):
-Series([], Name: emissao, dtype: float64)
----------------------------------------------------------------------------
-AssertionError                            Traceback (most recent call last)
-Cell In[5], line 17
-     15 # Verificações de segurança
-     16 assert X.shape[0] == y.shape[0], "❌ X e y com tamanhos diferentes!"
----> 17 assert y.shape[0] > 0, "❌ y está vazio!"
-     18 assert X.shape[1] > 0, "❌ X não tem features!"
-     19 print(f"\n {X.shape[0]} amostras, {X.shape[1]} features")
+14150    223538.51
+14151    225473.06
+14152    333445.33
+14153    280380.69
+14154    315281.04
+Name: emissao, dtype: float64
 
-AssertionError: ❌ y está vazio!
-# Célula 5 — Normalização Min-Max
+ 30795 amostras, 5 features
+ # Célula 5 — Normalização Min-Max
 '''
     Transforma todos os valores para o intervalo [0, 1]
     Fórmula: x_norm = (x - min) / (max - min)
@@ -177,6 +187,20 @@ print(f"\nX range: [{X.min().min():.4f}, {X.max().max():.4f}]")
 print(f"y range: [{y.min():.4f}, {y.max():.4f}]")
 print(f"\n✅ Normalização concluída!")
 X.head()
+X shape: (30795, 5)
+y shape: (30795,)
+
+X range: [0.0000, 1.0000]
+y range: [0.0000, 1.0000]
+
+✅ Normalização concluída!
+
+ano	nivel_1_Energia	nivel_1_Mudança de Uso da Terra e Floresta	nivel_1_Processos Industriais	nivel_1_Resíduos
+14150	0.000000	0.0	0.0	0.0	0.0
+14151	0.020408	0.0	0.0	0.0	0.0
+14152	0.040816	0.0	0.0	0.0	0.0
+14153	0.061224	0.0	0.0	0.0	0.0
+14154	0.081633	0.0	0.0	0.0	0.0
 # Célula 6 — Divisão treino/teste
 '''
     80% para treino, 20% para teste
@@ -194,8 +218,11 @@ print(f"Teste:  X={X_test.shape},  y={y_test.shape}")
 
 assert X_train.shape[0] == y_train.shape[0], "❌ Treino dessincronizado!"
 assert X_test.shape[0] == y_test.shape[0], "❌ Teste dessincronizado!"
-print(f"\n✅ Divisão correta! Pronto para treinar os modelos!")
+print(f"\nDivisão correta! Pronto para treinar os modelos!")
+Treino: X=(24636, 5), y=(24636,)
+Teste:  X=(6159, 5),  y=(6159,)
 
+✅ Divisão correta! Pronto para treinar os modelos!
 # Célula 7 — Função auxiliar de avaliação
 '''
     Função reutilizável que treina, prediz e calcula métricas
@@ -238,7 +265,7 @@ def avaliar_modelo(nome, modelo, X_train, X_test, y_train, y_test):
     }
 
 print(f"Função avaliar_modelo() definida!")
-
+Função avaliar_modelo() definida!
 # Célula 8 — Modelo 1: Regressão Linear Múltipla (MLR)
 '''
     Encontra a melhor combinação linear das features
@@ -248,7 +275,13 @@ res_mlr = avaliar_modelo(
     "Regressão Linear Múltipla",
     LinearRegression(),
     X_train, X_test, y_train, y_test
-)
+)==================================================
+ Regressão Linear Múltipla
+==================================================
+  MAE:  0.002283
+  RMSE: 0.015901
+  R²:   0.000787
+
 # Célula 9 — Modelo 2: Árvore de Regressão
 '''
 Divide os dados em regiões usando regras de decisão
@@ -259,6 +292,13 @@ res_arvore = avaliar_modelo(
     DecisionTreeRegressor(random_state=42),
     X_train, X_test, y_train, y_test
 )
+==================================================
+ Árvore de Regressão
+==================================================
+  MAE:  0.002341
+  RMSE: 0.015959
+  R²:   -0.006481
+
 # Célula 10 — Modelo 3: Floresta Aleatória de Regressão
 '''
     Combina várias árvores de decisão (ensemble)
@@ -270,6 +310,13 @@ res_floresta = avaliar_modelo(
     RandomForestRegressor(n_estimators=100, random_state=42),
     X_train, X_test, y_train, y_test
 )
+
+==================================================
+ Floresta Aleatória
+==================================================
+  MAE:  0.002348
+  RMSE: 0.015960
+  R²:   -0.006595
 
 # Célula 11 — Modelo 4: SVR (Support Vector Regression)
 '''
@@ -283,6 +330,13 @@ res_svr = avaliar_modelo(
     SVR(kernel="rbf", C=1.0, epsilon=0.01),
     X_train, X_test, y_train, y_test
 )
+==================================================
+ SVR (Support Vector Regression)
+==================================================
+  MAE:  0.007535
+  RMSE: 0.017312
+  R²:   -0.184317
+
 # Célula 12 — Modelo 5: Gradient Boosting Regression
 '''
     Constrói árvores sequencialmente, onde cada nova árvore
@@ -298,6 +352,13 @@ res_gbr = avaliar_modelo(
     ),
     X_train, X_test, y_train, y_test
 )
+==================================================
+ Gradient Boosting
+==================================================
+  MAE:  0.002335
+  RMSE: 0.015951
+  R²:   -0.005514
+
 # Célula 13 — Ranking comparativo dos modelos
 
 resultados = pd.DataFrame([
@@ -314,6 +375,16 @@ print("=" * 60)
 print(resultados.to_string(index=False))
 print("=" * 60)
 
+============================================================
+ RANKING DOS MODELOS (ordenado por R²)
+============================================================
+                           nome      MAE     RMSE        R2
+      Regressão Linear Múltipla 0.002283 0.015901  0.000787
+              Gradient Boosting 0.002335 0.015951 -0.005514
+            Árvore de Regressão 0.002341 0.015959 -0.006481
+             Floresta Aleatória 0.002348 0.015960 -0.006595
+SVR (Support Vector Regression) 0.007535 0.017312 -0.184317
+============================================================
 # Célula 14 — Gráfico: Real vs Predito (melhor modelo)
 
 # Identificar o melhor modelo
@@ -343,7 +414,10 @@ plt.show()
 
 print(f"\n🏆 Melhor modelo: {melhor_nome}")
 print(f"   R² = {resultados.iloc[0]['R2']:.6f}")
-# Célula 15 — Gráfico de barras comparativo
+
+🏆 Melhor modelo: Regressão Linear Múltipla
+   R² = 0.000787
+   # Célula 15 — Gráfico de barras comparativo
 
 fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 cores = ["#2ecc71", "#e74c3c", "#3498db", "#f39c12", "#9b59b6"]
