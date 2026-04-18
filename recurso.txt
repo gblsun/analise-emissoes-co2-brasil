@@ -1,171 +1,169 @@
-# Célula 0 — Instalar bibliotecas necessárias
+# ============================================================
+# Célula 0 — Instalação de dependências
+# ============================================================
 !pip install scikit-learn
-Requirement already satisfied: scikit-learn in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (1.6.1)
-Requirement already satisfied: numpy>=1.19.5 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (2.0.1)
-Requirement already satisfied: scipy>=1.6.0 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (1.15.2)
-Requirement already satisfied: joblib>=1.2.0 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (1.4.2)
-Requirement already satisfied: threadpoolctl>=3.1.0 in C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages (from scikit-learn) (3.6.0)
-WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
-WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
-WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
-WARNING: Ignoring invalid distribution ~orch (C:\Users\gabri\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages)
-# Celula 1 — Importar bibliotecas
 
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 1 — Todos os imports
+# ============================================================
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error,mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.svm import SVR
-from sklearn.neighbors import KNeighborsRegressor #tentar aplicar!
+from sklearn.neighbors import KNeighborsRegressor
 
+import warnings
+warnings.filterwarnings("ignore")
 
-print("Bibliotecas importadas com sucesso!")
-Bibliotecas importadas com sucesso!
-# Célula 2 — Carregamento do dataset
+print("✅ Bibliotecas importadas com sucesso!")
 
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 2 — Carregar dados
+# ============================================================
 df_raw = pd.read_csv("br_seeg_emissoes_brasil.csv")
-print(f"Shape original: {df_raw.shape}")
+print(f"Dataset original: {df_raw.shape}")
+print(f"\nValores únicos de 'gas': {df_raw['gas'].unique()}")
 df_raw.head()
-Shape original: (454850, 12)
 
-ano	nivel_1	nivel_2	nivel_3	nivel_4	nivel_5	nivel_6	tipo_emissao	gas	atividade_economica	produto	emissao
-0	1970	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	230462.17
-1	1971	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	226016.30
-2	1972	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	220101.20
-3	1973	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	214195.56
-4	1974	Agropecuária	Cultivo do Arroz	Diretas	Outros	Vegetal	Arroz	Emissão	CH4 (t)	NaN	NaN	186862.84
-
-# Célula 3 — Seleção das colunas relevantes
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 3 — Pipeline de preparação dos dados
+# ============================================================
 '''
-    Tudo junto numa célula só para evitar problemas de re-execução.
-    Sempre partimos do df_raw (original) para garantir consistência.
+    MUDANÇA PRINCIPAL em relação à versão anterior:
+    
+    Antes: usávamos cada linha individualmente (30795 linhas)
+           → cada linha era um sub-setor específico
+           → modelos não conseguiam aprender (R² ≈ 0)
+    
+    Agora: AGREGAMOS as emissões por ANO e SETOR
+           → emissão total de CO2 por setor por ano
+           → dados mais limpos e com padrão temporal claro
+    
+    Também criamos uma versão TOTAL (soma de todos os setores)
+    para fazer as projeções futuras.
 '''
 
-# Passo 1: Selecionar colunas relevantes
-df =df_raw[["ano", "nivel_1" , "gas" , "emissao"]].copy()
-print(f"1- Seleção de colunas: {df.shape}")
+# --- Passo 1: Selecionar colunas ---
+df = df_raw[["ano", "nivel_1", "gas", "emissao"]].copy()
+print(f"1) Seleção de colunas: {df.shape}")
 
-# Passo 2: Filtrar para apenas emissão de CO2
+# --- Passo 2: Filtrar CO2 ---
 df = df[df["gas"] == "CO2 (t)"].copy()
-print(f"\n2- Filtrar para CO2: {df.shape}")
+print(f"2) Filtro CO2 (t): {df.shape}")
 
-# Passo 3: verificar valores nulos
-print(f"\n3- Valores nulos antes da limpeza:")
+# --- Passo 3: Verificar nulos ---
+print(f"\n3) Valores nulos:")
 print(df.isnull().sum())
 
-# Passo 4: Remover linhas onde "emissão" é nulo
-# Modelos de ML não aceitam NaN no target (y).
+# --- Passo 4: Remover nulos em emissao ---
 df = df.dropna(subset=["emissao"])
+print(f"\n4) Após remover NaN: {df.shape}")
 
-# Passo 5: Remover coluna "gas"
-#   Já filtramos só CO2 (t), então essa coluna tem valor único
-#   e causaria erro "Could not convert string to float"
+# --- Passo 5: Remover coluna gas ---
 df = df.drop(columns=["gas"])
-print(f"\n5 - Após remover coluna 'gas': {df.shape}")
 
-# Passo 6: One-Hot Encoding na coluna 'nivel_1'
-#   Converte categorias em colunas binárias (0/1)
-#   drop_first=True evita multicolinearidade
-df = pd.get_dummies(df, columns=["nivel_1"], drop_first=True, dtype=int)
-print(f"\n6 - Após One-Hot Encoding: {df.shape}")
-print(f"   Colunas {list(df.columns)}")
+# --- Passo 6: AGREGAR emissões por ano e setor ---
+#     ESTA É A MUDANÇA CHAVE!
+#     Somamos todas as emissões de CO2 de cada setor por ano
+df_setor = df.groupby(["ano", "nivel_1"])["emissao"].sum().reset_index()
+print(f"\n5) Emissões agregadas por ano+setor: {df_setor.shape}")
+print(f"   Setores: {df_setor['nivel_1'].unique()}")
 
-# verificação final
+# --- Passo 7: Criar dataset TOTAL (soma de todos os setores por ano) ---
+#     Este será usado para as PROJEÇÕES FUTURAS
+df_total = df.groupby("ano")["emissao"].sum().reset_index()
+df_total.columns = ["ano", "emissao_total"]
+print(f"\n6) Emissões totais por ano: {df_total.shape}")
+print(f"   Anos: {df_total['ano'].min()} a {df_total['ano'].max()}")
+
+# --- Passo 8: One-Hot Encoding no dataset por setor ---
+df_modelo = pd.get_dummies(df_setor, columns=["nivel_1"], drop_first=True, dtype=int)
+print(f"\n7) Após One-Hot Encoding: {df_modelo.shape}")
+print(f"   Colunas: {list(df_modelo.columns)}")
+
+# --- Verificação ---
 print(f"\n{'='*50}")
-print(f"   Dados prontos!")
-print(f"   Total de amostras: {df.shape[0]}")
-print(f"   Total de colunas: {df.shape[1]}")
-print(f"   'emissao' presente: {df.isnull().sum().sum()}")
-print(f"\n{'='*50}")
-df
-1- Seleção de colunas: (454850, 4)
+print(f"✅ Dados prontos!")
+print(f"   Dataset modelo (por setor): {df_modelo.shape}")
+print(f"   Dataset total (projeções):  {df_total.shape}")
+print(f"{'='*50}")
 
-2- Filtrar para CO2: (37550, 4)
+df_modelo.head(10)
 
-3- Valores nulos antes da limpeza:
-ano           0
-nivel_1       0
-gas           0
-emissao    6755
-dtype: int64
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 4 — Visualizar dados antes de modelar
+# ============================================================
+'''
+    Sempre bom visualizar os dados antes de treinar modelos.
+    Isso ajuda a entender padrões e verificar se os dados
+    fazem sentido.
+'''
 
-5 - Após remover coluna 'gas': (30795, 3)
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
-6 - Após One-Hot Encoding: (30795, 6)
-   Colunas ['ano', 'emissao', 'nivel_1_Energia', 'nivel_1_Mudança de Uso da Terra e Floresta', 'nivel_1_Processos Industriais', 'nivel_1_Resíduos ']
+# Gráfico 1: Emissão total por ano
+axes[0].plot(df_total["ano"], df_total["emissao_total"], "b-o", markersize=4)
+axes[0].set_xlabel("Ano")
+axes[0].set_ylabel("Emissão CO2 (t)")
+axes[0].set_title("Emissão Total de CO2 no Brasil por Ano")
+axes[0].grid(True, alpha=0.3)
 
-==================================================
-   Dados prontos!
-   Total de amostras: 30795
-   Total de colunas: 6
-   'emissao' presente: 0
+# Gráfico 2: Emissão por setor
+for setor in df_setor["nivel_1"].unique():
+    dados = df_setor[df_setor["nivel_1"] == setor]
+    axes[1].plot(dados["ano"], dados["emissao"], "-o", markersize=3, label=setor)
 
-==================================================
+axes[1].set_xlabel("Ano")
+axes[1].set_ylabel("Emissão CO2 (t)")
+axes[1].set_title("Emissão de CO2 por Setor")
+axes[1].legend(fontsize=8)
+axes[1].grid(True, alpha=0.3)
 
-ano	emissao	nivel_1_Energia	nivel_1_Mudança de Uso da Terra e Floresta	nivel_1_Processos Industriais	nivel_1_Resíduos
-14150	1970	223538.510	0	0	0	0
-14151	1971	225473.060	0	0	0	0
-14152	1972	333445.330	0	0	0	0
-14153	1973	280380.690	0	0	0	0
-14154	1974	315281.040	0	0	0	0
-...	...	...	...	...	...	...
-454095	2015	40491.847	0	0	0	1
-454096	2016	41258.340	0	0	0	1
-454097	2017	41549.659	0	0	0	1
-454098	2018	41076.432	0	0	0	1
-454099	2019	41451.142	0	0	0	1
-30795 rows × 6 columns
-# Célula 4 — Separar X (features) e y (target)
+plt.tight_layout()
+plt.show()
 
-# X = tudo que o modelo usa para prever
-# y = o que queremos prever (emissão de CO2)
+print("📊 Observe os padrões temporais — isso é o que os modelos vão aprender!")
 
-X = df.drop(columns=["emissao"])
-y = df["emissao"]
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 5 — Separar X e y + Normalização
+# ============================================================
+'''
+    Separamos features (X) e target (y) do dataset por setor.
+    Depois normalizamos tudo para [0, 1].
+'''
+
+# Separar
+X = df_modelo.drop(columns=["emissao"])
+y = df_modelo["emissao"]
 
 print(f"X shape: {X.shape}")
 print(f"y shape: {y.shape}")
-print(f"\nFeatures (X): {list(X.columns)}")
-print(f"\ny (primeiros 5 valores):")
-print(y.head())
+print(f"Features: {list(X.columns)}")
 
-# Verificações de segurança
-assert X.shape[0] == y.shape[0], "❌ X e y com tamanhos diferentes!"
-assert y.shape[0] > 0, "❌ y está vazio!"
-assert X.shape[1] > 0, "❌ X não tem features!"
-print(f"\n {X.shape[0]} amostras, {X.shape[1]} features")
-X shape: (30795, 5)
-y shape: (30795,)
-
-Features (X): ['ano', 'nivel_1_Energia', 'nivel_1_Mudança de Uso da Terra e Floresta', 'nivel_1_Processos Industriais', 'nivel_1_Resíduos ']
-
-y (primeiros 5 valores):
-14150    223538.51
-14151    225473.06
-14152    333445.33
-14153    280380.69
-14154    315281.04
-Name: emissao, dtype: float64
-
- 30795 amostras, 5 features
- # Célula 5 — Normalização Min-Max
-'''
-    Transforma todos os valores para o intervalo [0, 1]
-    Fórmula: x_norm = (x - min) / (max - min)
-
-    Por que normalizar?
-        - SVR é muito sensível à escala dos dados
-        - Facilita comparação entre features
-        - Melhora convergência de alguns algoritmos
-'''
-# Normalizar X (features)
+# Normalizar X
 scaler_X = MinMaxScaler()
 X = pd.DataFrame(
     scaler_X.fit_transform(X),
@@ -173,7 +171,7 @@ X = pd.DataFrame(
     index=X.index
 )
 
-# Normalizar y (target) — separado para poder inverter depois
+# Normalizar y
 scaler_y = MinMaxScaler()
 y = pd.Series(
     scaler_y.fit_transform(y.values.reshape(-1, 1)).flatten(),
@@ -181,31 +179,20 @@ y = pd.Series(
     name="emissao"
 )
 
-print(f"X shape: {X.shape}")
-print(f"y shape: {y.shape}")
+# Verificações
+assert X.shape[0] == y.shape[0], "❌ X e y com tamanhos diferentes!"
+assert y.shape[0] > 0, "❌ y está vazio!"
+
 print(f"\nX range: [{X.min().min():.4f}, {X.max().max():.4f}]")
 print(f"y range: [{y.min():.4f}, {y.max():.4f}]")
-print(f"\n✅ Normalização concluída!")
-X.head()
-X shape: (30795, 5)
-y shape: (30795,)
+print(f"\n✅ {X.shape[0]} amostras, {X.shape[1]} features — prontos!")
 
-X range: [0.0000, 1.0000]
-y range: [0.0000, 1.0000]
-
-✅ Normalização concluída!
-
-ano	nivel_1_Energia	nivel_1_Mudança de Uso da Terra e Floresta	nivel_1_Processos Industriais	nivel_1_Resíduos
-14150	0.000000	0.0	0.0	0.0	0.0
-14151	0.020408	0.0	0.0	0.0	0.0
-14152	0.040816	0.0	0.0	0.0	0.0
-14153	0.061224	0.0	0.0	0.0	0.0
-14154	0.081633	0.0	0.0	0.0	0.0
+python
+Executar código
+Copiar código
+# ============================================================
 # Célula 6 — Divisão treino/teste
-'''
-    80% para treino, 20% para teste
-    random_state=42 garante reprodutibilidade
-'''
+# ============================================================
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
@@ -215,45 +202,41 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 print(f"Treino: X={X_train.shape}, y={y_train.shape}")
 print(f"Teste:  X={X_test.shape},  y={y_test.shape}")
+print(f"\n✅ Divisão 80/20 concluída!")
 
-assert X_train.shape[0] == y_train.shape[0], "❌ Treino dessincronizado!"
-assert X_test.shape[0] == y_test.shape[0], "❌ Teste dessincronizado!"
-print(f"\nDivisão correta! Pronto para treinar os modelos!")
-Treino: X=(24636, 5), y=(24636,)
-Teste:  X=(6159, 5),  y=(6159,)
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 7 — Função de avaliação (atualizada)
+# ============================================================
 
-✅ Divisão correta! Pronto para treinar os modelos!
-# Célula 7 — Função auxiliar de avaliação
-'''
-    Função reutilizável que treina, prediz e calcula métricas
-    Métricas:
-        - MAE  = Erro Médio Absoluto (menor = melhor)
-        - RMSE = Raiz do Erro Quadrático Médio (menor = melhor)
-        - R²   = Coeficiente de Determinação (maior = melhor)
-            1.0 = perfeito, 
-            0.0 = não explica nada.
-'''
 def avaliar_modelo(nome, modelo, X_train, X_test, y_train, y_test):
     """Treina o modelo, faz predições e exibe métricas."""
     
-    # Treinar
     modelo.fit(X_train, y_train)
-    
-    # Predizer
     y_pred = modelo.predict(X_test)
     
-    # Calcular métricas
     mae  = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     r2   = r2_score(y_test, y_pred)
     
-    # Exibir
-    print(f"{'='*50}")
-    print(f" {nome}")
-    print(f"{'='*50}")
+    print(f"{'='*55}")
+    print(f"  {nome}")
+    print(f"{'='*55}")
     print(f"  MAE:  {mae:.6f}")
     print(f"  RMSE: {rmse:.6f}")
     print(f"  R²:   {r2:.6f}")
+    
+    # Interpretar o R²
+    if r2 >= 0.9:
+        print(f"  → Excelente! 🟢")
+    elif r2 >= 0.7:
+        print(f"  → Bom 🟡")
+    elif r2 >= 0.5:
+        print(f"  → Razoável 🟠")
+    else:
+        print(f"  → Fraco 🔴")
     print()
     
     return {
@@ -261,183 +244,656 @@ def avaliar_modelo(nome, modelo, X_train, X_test, y_train, y_test):
         "MAE": mae,
         "RMSE": rmse,
         "R2": r2,
-        "y_pred": y_pred
+        "y_pred": y_pred,
+        "modelo": modelo
     }
 
-print(f"Função avaliar_modelo() definida!")
-Função avaliar_modelo() definida!
+print("✅ Função avaliar_modelo() definida!")
+
+python
+Executar código
+Copiar código
+# ============================================================
 # Célula 8 — Modelo 1: Regressão Linear Múltipla (MLR)
+# ============================================================
 '''
-    Encontra a melhor combinação linear das features
+    Encontra a melhor combinação linear das features.
     y = b0 + b1*x1 + b2*x2 + ... + bn*xn
+    
+    Simples e rápido, mas assume relação LINEAR entre
+    as variáveis — pode não capturar padrões complexos.
 '''
+
 res_mlr = avaliar_modelo(
     "Regressão Linear Múltipla",
     LinearRegression(),
     X_train, X_test, y_train, y_test
-)==================================================
- Regressão Linear Múltipla
-==================================================
-  MAE:  0.002283
-  RMSE: 0.015901
-  R²:   0.000787
+)
 
+python
+Executar código
+Copiar código
+# ============================================================
 # Célula 9 — Modelo 2: Árvore de Regressão
+# ============================================================
 '''
-Divide os dados em regiões usando regras de decisão
-Simples e interpretável, mas pode overfittar
+    Divide os dados em regiões usando regras de decisão.
+    Simples e interpretável, mas pode overfittar (decorar
+    os dados de treino sem generalizar).
 '''
+
 res_arvore = avaliar_modelo(
     "Árvore de Regressão",
-    DecisionTreeRegressor(random_state=42),
+    DecisionTreeRegressor(random_state=42, max_depth=10),
     X_train, X_test, y_train, y_test
 )
-==================================================
- Árvore de Regressão
-==================================================
-  MAE:  0.002341
-  RMSE: 0.015959
-  R²:   -0.006481
 
+python
+Executar código
+Copiar código
+# ============================================================
 # Célula 10 — Modelo 3: Floresta Aleatória de Regressão
+# ============================================================
 '''
-    Combina várias árvores de decisão (ensemble)
-    Cada árvore vê uma parte aleatória dos dados
-    O resultado final é a média das predições
+    Combina várias árvores de decisão (ensemble).
+    Cada árvore vê uma parte aleatória dos dados.
+    O resultado final é a MÉDIA das predições de todas as árvores.
+    Reduz o overfitting em relação a uma árvore só.
 '''
+
 res_floresta = avaliar_modelo(
     "Floresta Aleatória",
-    RandomForestRegressor(n_estimators=100, random_state=42),
+    RandomForestRegressor(n_estimators=200, random_state=42, max_depth=15),
     X_train, X_test, y_train, y_test
 )
 
-==================================================
- Floresta Aleatória
-==================================================
-  MAE:  0.002348
-  RMSE: 0.015960
-  R²:   -0.006595
-
+python
+Executar código
+Copiar código
+# ============================================================
 # Célula 11 — Modelo 4: SVR (Support Vector Regression)
+# ============================================================
 '''
     Encontra um hiperplano que melhor se ajusta aos dados
-    dentro de uma margem de tolerância (epsilon)
-    Muito sensível à escala — por isso normalizamos antes
+    dentro de uma margem de tolerância (epsilon).
+    
+    Usa o kernel RBF (Radial Basis Function) que permite
+    capturar relações não-lineares.
+    
+    MUITO sensível à escala — por isso normalizamos antes.
+    
+    One-Hot Encoding é necessário para SVR porque ele não
+    aceita variáveis categóricas — precisa de tudo numérico.
 '''
 
 res_svr = avaliar_modelo(
     "SVR (Support Vector Regression)",
-    SVR(kernel="rbf", C=1.0, epsilon=0.01),
+    SVR(kernel="rbf", C=10.0, epsilon=0.01, gamma="scale"),
     X_train, X_test, y_train, y_test
 )
-==================================================
- SVR (Support Vector Regression)
-==================================================
-  MAE:  0.007535
-  RMSE: 0.017312
-  R²:   -0.184317
 
+python
+Executar código
+Copiar código
+# ============================================================
 # Célula 12 — Modelo 5: Gradient Boosting Regression
+# ============================================================
 '''
-    Constrói árvores sequencialmente, onde cada nova árvore
-    corrige os erros da anterior. Geralmente muito preciso.
+    Constrói árvores SEQUENCIALMENTE — cada nova árvore
+    corrige os erros da anterior (boosting).
+    Geralmente um dos modelos mais precisos.
 '''
+
 res_gbr = avaliar_modelo(
     "Gradient Boosting",
     GradientBoostingRegressor(
-        n_estimators=200,
-        learning_rate=0.1,
+        n_estimators=300,
+        learning_rate=0.05,
         max_depth=5,
         random_state=42
     ),
     X_train, X_test, y_train, y_test
 )
-==================================================
- Gradient Boosting
-==================================================
-  MAE:  0.002335
-  RMSE: 0.015951
-  R²:   -0.005514
 
-# Célula 13 — Ranking comparativo dos modelos
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 13 — Modelo 6: KNN Regressor (NOVO!)
+# ============================================================
+'''
+    K-Nearest Neighbors Regression.
+    Para prever um valor, olha os K vizinhos mais próximos
+    no espaço das features e calcula a média dos seus valores.
+    
+    Simples e intuitivo. Funciona bem quando dados similares
+    têm valores de emissão similares.
+'''
+
+res_knn = avaliar_modelo(
+    "KNN Regressor",
+    KNeighborsRegressor(n_neighbors=5, weights="distance"),
+    X_train, X_test, y_train, y_test
+)
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 14 — Ranking comparativo dos modelos
+# ============================================================
+
+todos_resultados = [res_mlr, res_arvore, res_floresta, res_svr, res_gbr, res_knn]
 
 resultados = pd.DataFrame([
-    {k: v for k, v in r.items() if k != "y_pred"}
-    for r in [res_mlr, res_arvore, res_floresta, res_svr, res_gbr]
+    {k: v for k, v in r.items() if k not in ["y_pred", "modelo"]}
+    for r in todos_resultados
 ])
 
 # Ordenar pelo R² (maior = melhor)
 resultados = resultados.sort_values("R2", ascending=False).reset_index(drop=True)
 
-print("=" * 60)
-print(" RANKING DOS MODELOS (ordenado por R²)")
-print("=" * 60)
+print("=" * 65)
+print("  RANKING DOS MODELOS (ordenado por R²)")
+print("=" * 65)
 print(resultados.to_string(index=False))
-print("=" * 60)
+print("=" * 65)
 
-============================================================
- RANKING DOS MODELOS (ordenado por R²)
-============================================================
-                           nome      MAE     RMSE        R2
-      Regressão Linear Múltipla 0.002283 0.015901  0.000787
-              Gradient Boosting 0.002335 0.015951 -0.005514
-            Árvore de Regressão 0.002341 0.015959 -0.006481
-             Floresta Aleatória 0.002348 0.015960 -0.006595
-SVR (Support Vector Regression) 0.007535 0.017312 -0.184317
-============================================================
-# Célula 14 — Gráfico: Real vs Predito (melhor modelo)
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 15 — Gráfico Real vs Predito (melhor modelo)
+# ============================================================
 
-# Identificar o melhor modelo
 melhor_nome = resultados.iloc[0]["nome"]
 
-# Mapear nome → predições
-preds = {
-    "Regressão Linear Múltipla": res_mlr,
-    "Árvore de Regressão": res_arvore,
-    "Floresta Aleatória": res_floresta,
-    "SVR (Support Vector Regression)": res_svr,
-    "Gradient Boosting": res_gbr,
-}
-
+preds = {r["nome"]: r for r in todos_resultados}
 y_pred_melhor = preds[melhor_nome]["y_pred"]
 
 plt.figure(figsize=(10, 6))
-plt.scatter(y_test, y_pred_melhor, alpha=0.3, s=10, color="steelblue")
+plt.scatter(y_test, y_pred_melhor, alpha=0.5, s=20, color="steelblue", label="Predições")
 plt.plot([0, 1], [0, 1], "r--", linewidth=2, label="Ideal (Real = Predito)")
 plt.xlabel("Valor Real (normalizado)")
 plt.ylabel("Valor Predito (normalizado)")
-plt.title(f"Real vs Predito — {melhor_nome}")
+plt.title(f"Real vs Predito — {melhor_nome} (R² = {resultados.iloc[0]['R2']:.4f})")
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 
-print(f"\n🏆 Melhor modelo: {melhor_nome}")
-print(f"   R² = {resultados.iloc[0]['R2']:.6f}")
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 16 — Gráfico de barras comparativo
+# ============================================================
 
-🏆 Melhor modelo: Regressão Linear Múltipla
-   R² = 0.000787
-   # Célula 15 — Gráfico de barras comparativo
-
-fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-cores = ["#2ecc71", "#e74c3c", "#3498db", "#f39c12", "#9b59b6"]
+fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+cores = ["#2ecc71", "#e74c3c", "#3498db", "#f39c12", "#9b59b6", "#1abc9c"]
 
 # R²
-axes[0].barh(resultados["nome"], resultados["R2"], color=cores)
+axes[0].barh(resultados["nome"], resultados["R2"], color=cores[:len(resultados)])
 axes[0].set_xlabel("R²")
 axes[0].set_title("R² (maior = melhor)")
-axes[0].set_xlim(0, 1.1)
 
 # MAE
-axes[1].barh(resultados["nome"], resultados["MAE"], color=cores)
+axes[1].barh(resultados["nome"], resultados["MAE"], color=cores[:len(resultados)])
 axes[1].set_xlabel("MAE")
 axes[1].set_title("MAE (menor = melhor)")
 
 # RMSE
-axes[2].barh(resultados["nome"], resultados["RMSE"], color=cores)
+axes[2].barh(resultados["nome"], resultados["RMSE"], color=cores[:len(resultados)])
 axes[2].set_xlabel("RMSE")
 axes[2].set_title("RMSE (menor = melhor)")
 
-plt.suptitle("Comparação dos Modelos de Regressão", fontsize=14, fontweight="bold")
+plt.suptitle("Comparação dos 6 Modelos de Regressão", fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 17 — PROJEÇÕES FUTURAS: Preparação
+# ============================================================
+'''
+    OBJETIVO PRINCIPAL DO PROJETO:
+    
+    "Se nada mudar no cenário atual, como ficaria a emissão
+     de CO2 daqui 10, 30, 50, 100, 300 e 500 anos?"
+    
+    Usamos o dataset TOTAL (emissão por ano) e treinamos
+    vários modelos para projetar o futuro.
+    
+    Como temos apenas 1 feature (ano), adicionamos features
+    polinomiais para capturar tendências não-lineares:
+    - ano² (tendência quadrática)
+    - ano³ (tendência cúbica)
+'''
+
+# Preparar dados para projeção
+X_total = df_total[["ano"]].values
+y_total = df_total["emissao_total"].values
+
+# Adicionar features polinomiais (ano², ano³)
+# Isso permite capturar tendências não-lineares
+poly = PolynomialFeatures(degree=3, include_bias=False)
+X_poly = poly.fit_transform(X_total)
+
+print(f"Features originais: ano")
+print(f"Features polinomiais: ano, ano², ano³")
+print(f"X_poly shape: {X_poly.shape}")
+print(f"Anos disponíveis: {df_total['ano'].min()} a {df_total['ano'].max()}")
+print(f"\nDados de emissão total:")
+print(df_total.tail(10))
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 18 — PROJEÇÕES: Treinar todos os modelos
+# ============================================================
+'''
+    Treinamos cada modelo com TODOS os dados históricos
+    (sem split treino/teste) porque queremos a melhor
+    projeção possível para o futuro.
+    
+    Depois avaliamos qual modelo se ajusta melhor aos
+    dados históricos (R² no treino).
+'''
+
+# Definir anos futuros para projeção
+ano_atual = df_total["ano"].max()
+anos_projecao = [
+    ano_atual + 10,   # ~2029
+    ano_atual + 30,   # ~2049
+    ano_atual + 50,   # ~2069
+    ano_atual + 100,  # ~2119
+    ano_atual + 300,  # ~2319
+    ano_atual + 500,  # ~2519
+]
+
+print(f"Ano mais recente nos dados: {ano_atual}")
+print(f"Anos para projeção: {anos_projecao}")
+
+# Dicionário para guardar modelos e projeções
+modelos_projecao = {}
+
+# Lista de modelos para projeção
+lista_modelos = [
+    ("Regressão Linear", LinearRegression()),
+    ("Árvore de Regressão", DecisionTreeRegressor(random_state=42, max_depth=5)),
+    ("Floresta Aleatória", RandomForestRegressor(n_estimators=200, random_state=42)),
+    ("SVR", SVR(kernel="rbf", C=100, epsilon=0.01, gamma="scale")),
+    ("Gradient Boosting", GradientBoostingRegressor(n_estimators=300, learning_rate=0.05, max_depth=4, random_state=42)),
+    ("KNN", KNeighborsRegressor(n_neighbors=3, weights="distance")),
+]
+
+print(f"\n{'='*60}")
+print(f"  Treinando modelos para projeção...")
+print(f"{'='*60}\n")
+
+for nome, modelo in lista_modelos:
+    # Treinar com TODOS os dados históricos
+    modelo.fit(X_poly, y_total)
+    
+    # R² no treino (quão bem se ajusta aos dados históricos)
+    y_pred_treino = modelo.predict(X_poly)
+    r2_treino = r2_score(y_total, y_pred_treino)
+    
+    # Gerar projeções
+    anos_futuros = np.array(anos_projecao).reshape(-1, 1)
+    X_futuro_poly = poly.transform(anos_futuros)
+    projecoes = modelo.predict(X_futuro_poly)
+    
+    # Guardar
+    modelos_projecao[nome] = {
+        "modelo": modelo,
+        "r2_treino": r2_treino,
+        "projecoes": projecoes,
+    }
+    
+    print(f"  {nome:25s} | R² treino: {r2_treino:.6f}")
+
+print(f"\n✅ Todos os modelos treinados!")
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 19 — PROJEÇÕES: Tabela comparativa
+# ============================================================
+'''
+    Tabela mostrando a projeção de cada modelo para cada
+    horizonte temporal.
+    
+    Valores em TONELADAS de CO2.
+'''
+
+# Criar tabela de projeções
+tabela = {"Ano": anos_projecao}
+for nome, dados in modelos_projecao.items():
+    tabela[nome] = dados["projecoes"]
+
+df_projecoes = pd.DataFrame(tabela)
+
+# Adicionar coluna de "daqui a X anos"
+df_projecoes.insert(1, "Horizonte", [
+    f"+{a - ano_atual} anos" for a in anos_projecao
+])
+
+print("=" * 100)
+print("  PROJEÇÕES DE EMISSÃO DE CO2 (toneladas) — SE NADA MUDAR")
+print("=" * 100)
+
+# Formatar números grandes
+pd.set_option("display.float_format", lambda x: f"{x:,.0f}")
+print(df_projecoes.to_string(index=False))
+pd.reset_option("display.float_format")
+
+print("=" * 100)
+
+# Emissão atual para referência
+emissao_atual = df_total[df_total["ano"] == ano_atual]["emissao_total"].values[0]
+print(f"\n📊 Emissão atual ({ano_atual}): {emissao_atual:,.0f} toneladas de CO2")
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 20 — GRÁFICO 1: Histórico + Projeções (todos os modelos)
+# ============================================================
+'''
+    Gráfico principal: mostra os dados históricos reais
+    e as projeções de cada modelo até o futuro.
+'''
+
+plt.figure(figsize=(16, 8))
+
+# Dados históricos (linha preta grossa)
+plt.plot(
+    df_total["ano"], df_total["emissao_total"],
+    "k-o", linewidth=2.5, markersize=4, label="Dados Históricos", zorder=5
+)
+
+# Gerar curvas suaves para cada modelo
+anos_continuo = np.arange(df_total["ano"].min(), max(anos_projecao) + 1, 1).reshape(-1, 1)
+X_continuo_poly = poly.transform(anos_continuo)
+
+cores_modelos = {
+    "Regressão Linear": "#e74c3c",
+    "Árvore de Regressão": "#2ecc71",
+    "Floresta Aleatória": "#3498db",
+    "SVR": "#f39c12",
+    "Gradient Boosting": "#9b59b6",
+    "KNN": "#1abc9c",
+}
+
+for nome, dados in modelos_projecao.items():
+    modelo = dados["modelo"]
+    y_continuo = modelo.predict(X_continuo_poly)
+    
+    plt.plot(
+        anos_continuo, y_continuo,
+        "--", linewidth=1.5, alpha=0.7,
+        color=cores_modelos[nome],
+        label=f"{nome} (R²={dados['r2_treino']:.3f})"
+    )
+
+# Linha vertical separando histórico de projeção
+plt.axvline(x=ano_atual, color="gray", linestyle=":", linewidth=1.5, alpha=0.7)
+plt.text(ano_atual + 2, plt.ylim()[1] * 0.95, "← Histórico | Projeção →",
+         fontsize=10, color="gray")
+
+plt.xlabel("Ano", fontsize=12)
+plt.ylabel("Emissão Total de CO2 (toneladas)", fontsize=12)
+plt.title("Projeção de Emissões de CO2 no Brasil — Se Nada Mudar", fontsize=14, fontweight="bold")
+plt.legend(loc="upper left", fontsize=9)
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 21 — GRÁFICO 2: Projeções focado (apenas futuro)
+# ============================================================
+'''
+    Gráfico de barras agrupadas mostrando a projeção de cada
+    modelo para cada horizonte temporal.
+'''
+
+fig, ax = plt.subplots(figsize=(16, 8))
+
+n_modelos = len(modelos_projecao)
+n_horizontes = len(anos_projecao)
+largura = 0.12
+x = np.arange(n_horizontes)
+
+horizontes = [f"{a}\n(+{a - ano_atual} anos)" for a in anos_projecao]
+
+for i, (nome, dados) in enumerate(modelos_projecao.items()):
+    valores = dados["projecoes"]
+    # Limitar valores negativos a zero (emissão não pode ser negativa)
+    valores = np.maximum(valores, 0)
+    
+    ax.bar(
+        x + i * largura,
+        valores,
+        largura,
+        label=nome,
+        color=list(cores_modelos.values())[i],
+        alpha=0.85
+    )
+
+ax.set_xlabel("Ano da Projeção", fontsize=12)
+ax.set_ylabel("Emissão CO2 (toneladas)", fontsize=12)
+ax.set_title("Projeções por Modelo — Emissão de CO2 se Nada Mudar", fontsize=14, fontweight="bold")
+ax.set_xticks(x + largura * (n_modelos - 1) / 2)
+ax.set_xticklabels(horizontes)
+ax.legend(fontsize=9)
+ax.grid(True, alpha=0.3, axis="y")
+plt.tight_layout()
+plt.show()
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 22 — GRÁFICO 3: Variação percentual em relação ao atual
+# ============================================================
+'''
+    Mostra o AUMENTO PERCENTUAL da emissão em relação ao
+    valor atual, facilitando a interpretação.
+'''
+
+emissao_atual = df_total[df_total["ano"] == ano_atual]["emissao_total"].values[0]
+
+fig, ax = plt.subplots(figsize=(14, 7))
+
+for nome, dados in modelos_projecao.items():
+    projecoes = np.maximum(dados["projecoes"], 0)  # Sem negativos
+    variacao_pct = ((projecoes - emissao_atual) / emissao_atual) * 100
+    
+    ax.plot(
+        anos_projecao, variacao_pct,
+        "-o", linewidth=2, markersize=8,
+        color=cores_modelos[nome],
+        label=nome
+    )
+
+ax.axhline(y=0, color="black", linestyle="-", linewidth=1)
+ax.set_xlabel("Ano da Projeção", fontsize=12)
+ax.set_ylabel("Variação em relação ao atual (%)", fontsize=12)
+ax.set_title(f"Variação % da Emissão de CO2 em Relação a {ano_atual}", fontsize=14, fontweight="bold")
+ax.legend(fontsize=9)
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 23 — GRÁFICO 4: Emissão por SETOR — histórico
+# ============================================================
+'''
+    Mostra a contribuição de cada setor ao longo do tempo.
+    Gráfico de área empilhada — permite ver qual setor
+    contribui mais e como isso muda ao longo dos anos.
+'''
+
+# Pivotar dados por setor
+df_pivot = df_setor.pivot_table(
+    index="ano", columns="nivel_1", values="emissao", aggfunc="sum"
+).fillna(0)
+
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+
+# Área empilhada
+df_pivot.plot.area(ax=axes[0], alpha=0.7, linewidth=0.5)
+axes[0].set_xlabel("Ano")
+axes[0].set_ylabel("Emissão CO2 (t)")
+axes[0].set_title("Emissão de CO2 por Setor — Área Empilhada")
+axes[0].legend(fontsize=8, loc="upper left")
+axes[0].grid(True, alpha=0.3)
+
+# Linhas separadas
+for col in df_pivot.columns:
+    axes[1].plot(df_pivot.index, df_pivot[col], "-o", markersize=3, label=col)
+
+axes[1].set_xlabel("Ano")
+axes[1].set_ylabel("Emissão CO2 (t)")
+axes[1].set_title("Emissão de CO2 por Setor — Linhas")
+axes[1].legend(fontsize=8)
+axes[1].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 24 — GRÁFICO 5: Projeção curto prazo (próximos 50 anos)
+# ============================================================
+'''
+    Zoom nas projeções de curto prazo (mais confiáveis).
+    Projeções muito distantes (300-500 anos) são especulativas.
+'''
+
+plt.figure(figsize=(14, 7))
+
+# Histórico
+plt.plot(
+    df_total["ano"], df_total["emissao_total"],
+    "k-o", linewidth=2.5, markersize=4, label="Dados Históricos", zorder=5
+)
+
+# Projeções apenas até +50 anos
+anos_curto = np.arange(df_total["ano"].min(), ano_atual + 51, 1).reshape(-1, 1)
+X_curto_poly = poly.transform(anos_curto)
+
+for nome, dados in modelos_projecao.items():
+    modelo = dados["modelo"]
+    y_curto = modelo.predict(X_curto_poly)
+    
+    plt.plot(
+        anos_curto, y_curto,
+        "--", linewidth=1.5, alpha=0.8,
+        color=cores_modelos[nome],
+        label=f"{nome}"
+    )
+
+plt.axvline(x=ano_atual, color="gray", linestyle=":", linewidth=1.5)
+plt.xlabel("Ano", fontsize=12)
+plt.ylabel("Emissão Total CO2 (t)", fontsize=12)
+plt.title("Projeção de Curto Prazo (próximos 50 anos)", fontsize=14, fontweight="bold")
+plt.legend(fontsize=9)
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+python
+Executar código
+Copiar código
+# ============================================================
+# Célula 25 — RESUMO FINAL DO PROJETO
+# ============================================================
+'''
+    Resumo consolidado de tudo que foi feito no projeto.
+'''
+
+print("=" * 70)
+print("  RESUMO FINAL DO PROJETO")
+print("  Análise e Projeção de Emissões de CO2 no Brasil")
+print("=" * 70)
+
+print(f"\n📁 DADOS:")
+print(f"   Dataset: br_seeg_emissoes_brasil.csv")
+print(f"   Registros originais: {df_raw.shape[0]:,}")
+print(f"   Filtro aplicado: apenas CO2 (t)")
+print(f"   Período: {df_total['ano'].min()} a {df_total['ano'].max()}")
+print(f"   Emissão atual ({ano_atual}): {emissao_atual:,.0f} toneladas")
+
+print(f"\n🔧 PRÉ-PROCESSAMENTO:")
+print(f"   ✓ Verificação de valores nulos (NaN)")
+print(f"   ✓ Remoção de NaN na coluna emissao")
+print(f"   ✓ One-Hot Encoding (nivel_1 → dummies)")
+print(f"   ✓ Normalização Min-Max [0, 1]")
+print(f"   ✓ Agregação por ano e setor")
+
+print(f"\n🤖 MODELOS DE REGRESSÃO (ranking por R²):")
+print(resultados.to_string(index=False))
+
+print(f"\n🔮 PROJEÇÕES (se nada mudar):")
+for nome, dados in modelos_projecao.items():
+    print(f"\n   {nome} (R² treino: {dados['r2_treino']:.4f}):")
+    for i, ano in enumerate(anos_projecao):
+        valor = max(dados["projecoes"][i], 0)
+        variacao = ((valor - emissao_atual) / emissao_atual) * 100
+        print(f"     {ano} (+{ano - ano_atual:3d} anos): {valor:>15,.0f} t  ({variacao:+.1f}%)")
+
+print(f"\n{'='*70}")
+print(f"  ⚠️  NOTA: Projeções assumem que tendências históricas se mantêm.")
+print(f"  Fatores como políticas climáticas, tecnologia e desmatamento")
+print(f"  podem alterar significativamente esses cenários.")
+print(f"{'='*70}")
+📋 Resumo — 26 células (0 a 25)
+Célula	Conteúdo
+0	Instalação
+1	Imports
+2	Carregar CSV
+3	Pipeline: filtro + NaN + encoding + AGREGAÇÃO
+4	Visualização dos dados
+5	Separar X/y + Normalização
+6	Divisão treino/teste
+7	Função avaliar_modelo()
+8	Regressão Linear Múltipla
+9	Árvore de Regressão
+10	Floresta Aleatória
+11	SVR (com OHE aplicado)
+12	Gradient Boosting
+13	KNN Regressor (NOVO!)
+14	Ranking comparativo
+15	Gráfico Real vs Predito
+16	Gráfico de barras
+17	Preparação projeções futuras
+18	Treinar modelos para projeção
+19	Tabela de projeções (10-500 anos)
+20	Gráfico histórico + projeções
+21	Gráfico barras agrupadas (futuro)
+22	Gráfico variação percentual
+23	Gráfico por setor (área empilhada)
+24	Gráfico curto prazo (50 anos)
+25	Resumo final do projeto
+
+
+
+
+
+
+
+
